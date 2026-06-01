@@ -137,7 +137,10 @@ export default function Home() {
   // Sparkles list for splash background effects
   const [sparkles, setSparkles] = useState<Array<{ id: number; top: number; left: number; color: string; size: number }>>([]);
 
-  // --- Recipes database (exactly like mock slide items) ---
+  // Favorite recipes tracking list
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  // --- Recipes database (expanded gourmet catalog for maximum variety and search relevancy) ---
   const recipes: Recipe[] = [
     {
       id: "r1",
@@ -165,7 +168,7 @@ export default function Home() {
       time: 45,
       image: "https://lh3.googleusercontent.com/aida-public/AB6AXuBuVaimHKbqnSqlMCFTCgLsyQssXGT5E6b7kwuxywxc8iXaMxdx4kXUZ97_iC3g8wEQ0VrqVHZOAX75MwH8SOXih8psXsuxbj8_vdGrhtPluEWTys_0eusjGW83UxsOCAbz49UnMTEmf7NRc9JiItPeC43z3W2ys2EGT9iYVjRlicD5Run5BN2pmsvmgo_Z9Hsl4mKzZ28L3drLB1lfApgwjl-ZBDpMdzW-V-ltzBtFPBD09WRM6HtmrYaYJQlWD0xQkRzK8TYIdmae",
       description: "Masa madre crujiente con tomate San Marzano y mozzarella de búfala fresca.",
-      ingredients: ["250g de masa de pizza con masa madre", "100ml de salsa de tomate San Marzano", "125g de mozzarella de búfala fresca", "Hojas de albahaca fresca del huerto", "1 cucharadita de aceite de oliva virgen extra"],
+      ingredients: ["250g de masa de pizza con masa madre", "100ml de salsa de tomate San Marzano", "125g de mozzarella de búfala fresca", "Hojas de albahaca fresca del huerto", "1 cucharidita de aceite de oliva virgen extra"],
       steps: [
         "Precalentar el horno a máxima potencia (al menos 230°C o en modo pizza si tu horno dispone de él).",
         "Estirar la masa con las manos sobre papel de hornear, dejando los bordes ligeramente más gruesos para que queden esponjosos.",
@@ -223,7 +226,7 @@ export default function Home() {
       steps: [
         "Tostar las rebanadas de pan de espelta integral al gusto hasta conseguir un color tostado uniforme.",
         "Pelar el aguacate, retirar el hueso y machacarlo con un tenedor en un bol agregando unas gotitas de limón para que no se oxide y una pizca de sal.",
-        "Para el huevo poché: Hervir abundante agua en una olla pequeña con el vinagre. Cuando hierva a fuego suave, girar el agua para formar un remolino e introducir el huevo crudo deslizado despacio. Cocinar por 3 minutos exactos y retirar con una espumadera.",
+        "Para el huevo poché: Hervir abundante agua en una ola pequeña con el vinagre. Cuando hierva a fuego suave, girar el agua para formar un remolino e introducir el huevo crudo deslizado despacio. Cocinar por 3 minutos exactos y retirar con una espumadera.",
         "Montar la tostada untando con generosidad el cremoso de aguacate.",
         "Colocar encima el huevo poché caliente bien escurrido.",
         "Decorar con la mezcla de semillas y opcionalmente copos de chile para los adultos."
@@ -245,6 +248,223 @@ export default function Home() {
         "Pelar los ajos asados que habrán quedado cremosos.",
         "Introducir todos los ingredientes rostizados de la placa en una licuadora o triturador, vertiendo el caldo de verduras caliente y la crema de coco.",
         "Triturar hasta obtener una sopa ultra fina. Servir caliente, decorando con hojas frescas de albahaca fresca y acompañando opcionalmente de tostadas con queso."
+      ]
+    },
+    {
+      id: "r7",
+      title: "Tortitas de Avena y Plátano",
+      category: "Desayuno",
+      stars: 4.7,
+      time: 15,
+      image: "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?auto=format&fit=crop&q=80&w=600",
+      description: "Tortitas esponjosas sin azúcar añadida, endulzadas de forma natural con plátano maduro.",
+      ingredients: ["1 plátano maduro grande", "1/2 taza de copos de avena triturados", "1 huevo entero campero", "1/4 taza de leche o bebida vegetal", "1 cucharadita de canela molida", "1 puñado de arándanos frescos"],
+      steps: [
+        "Triturar el plátano maduro en un bol hasta conseguir un puré homogéneo.",
+        "Añadir el huevo entero y batir enérgicamente con el puré de plátano.",
+        "Incorporar la avena molida, la canela y la leche, mezclando hasta obtener una masa densa pero fluida.",
+        "Calentar una sartén antiadherente a fuego medio con unas gotas de aceite de coco o mantequilla.",
+        "Verter porciones de masa para formar las tortitas, cocinando de 2 a 3 minutos por lado hasta que salgan burbujas en la superficie.",
+        "Servir calientes con arándanos frescos por encima y un toque opcional de miel pura."
+      ]
+    },
+    {
+      id: "r8",
+      title: "Risotto de Setas Silvestres",
+      category: "Confort",
+      stars: 4.9,
+      time: 35,
+      image: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=600",
+      description: "Cremoso risotto italiano con una selección gourmet de setas, vino blanco y queso parmesano.",
+      ingredients: ["300g de arroz carnaroli o arborio", "200g de setas variadas (boletus, champiñones, portobello)", "1 cebolleta fresca", "100ml de vino blanco seco", "1L de caldo de verduras caliente", "55g de mantequilla sin sal", "50g de queso parmesano rallado", "Aceite de trufa (opcional)"],
+      steps: [
+        "Limpiar las setas y picarlas en trozos medianos. Rehogar en una cazuela ancha con un hilo de aceite hasta dorar y reservar.",
+        "En la misma cazuela, derretir la mitad de la mantequilla y sofreír la cebolleta finamente picada a fuego lento.",
+        "Añadir el arroz y nacrarlo por 2 minutos hasta que brille.",
+        "Verter el vino blanco y dejar que se evapore por completo el alcohol.",
+        "Ir incorporando el caldo de verduras caliente cazo a cazo, removiendo continuamente para liberar el almidón del arroz.",
+        "Tras 17 minutos de cocción, cuando esté al dente, añadir las setas reservadas, retirar del fuego e incorporar la mantequilla restante y el queso parmesano para amantecar.",
+        "Dejar reposar 2 minutos y coronar con un suave hilo de aceite de trufa para los comensales."
+      ]
+    },
+    {
+      id: "r9",
+      title: "Tacos de Pollo al Chipotle",
+      category: "Almuerzo",
+      stars: 4.6,
+      time: 20,
+      image: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?auto=format&fit=crop&q=80&w=600",
+      description: "Tacos mexicanos tradicionales con pollo deshebrado en una salsa sabrosa y ligeramente picante de chile chipotle.",
+      ingredients: ["400g de pechuga de pollo cocida y deshebrada", "1 cebolla cortada en juliana", "2 tomates medianos licuados", "1 chile chipotle en adobo", "8 tortillas de maíz de buena calidad", "Cilantro fresco y gajos de lima", "1/2 taza de crema agria de mesa"],
+      steps: [
+        "Sofreír la cebolla en juliana en una sartén con aceite hasta caramelizar a fuego medio.",
+        "Licuar los tomates con el chile chipotle y verter sobre la sartén.",
+        "Añadir el pollo deshebrado, mezclar bien con la salsa de tomate y chipotle, y dejar cocinar a fuego lento durante 8-10 minutos hasta reducir.",
+        "Calentar las tortillas de maíz en un comal o sartén caliente por ambos lados.",
+        "Rellenar las tortillas calientes con la mezcla sazonada de pollo deshebrado.",
+        "Servir con abundante cilantro picado, un chorrito de crema agria y gajos de lima para exprimir al momento."
+      ]
+    },
+    {
+      id: "r10",
+      title: "Lasaña Vegetariana de Espinacas",
+      category: "Confort",
+      stars: 4.8,
+      time: 40,
+      image: "https://images.unsplash.com/photo-1574894709920-11b28e7367e3?auto=format&fit=crop&q=80&w=600",
+      description: "Capas de pasta rellenas de espinacas frescas salteadas, queso ricotta cremoso y salsa de tomate casera.",
+      ingredients: ["12 láminas de pasta para lasaña precocidas", "400g de espinacas frescas", "250g de queso ricotta o requesón", "300ml de salsa de tomate casera", "200ml de bechamel suave", "100g de queso mozzarella rallado", "Aceite de oliva y nuez moscada"],
+      steps: [
+        "Blanquear o saltear las espinacas frescas en sartén con un poco de ajo por 3 minutos. Escurrir muy bien para extraer el exceso de agua.",
+        "En un cuenco, mezclar las espinacas con el queso ricotta, sal, pimienta negra y una pizca aromática de nuez moscada.",
+        "En una fuente de horno rectangular, poner un chorrito de tomate casero en la base.",
+        "Colocar una capa de pasta, luego la mezcla de crema de espinacas y ricotta, otra de pasta y tomate, repitiendo el proceso.",
+        "Terminar con una capa de pasta cubierta con bechamel suave y mozzarella rallada.",
+        "Hornear a 180°C durante 20-25 minutos hasta que la superficie esté dorada y haga burbujas de queso gratinado delicioso."
+      ]
+    },
+    {
+      id: "r11",
+      title: "Hamburguesa Gourmet de Ternera",
+      category: "Almuerzo",
+      stars: 4.7,
+      time: 15,
+      image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&q=80&w=600",
+      description: "Carne selecta de ternera picada en pan brioche artesano con queso cheddar fundido y cebolla pochada.",
+      ingredients: ["2 hamburguesas de carne de ternera picada de 180g", "2 panes brioche de panadería", "2 rodajas de queso cheddar añejo de calidad", "1 cebolla pochada lentamente con mantequilla", "Hojas de lechuga roble o espinaca tierna", "Salsa casera: mostaza clásica y compota suave de higos"],
+      steps: [
+        "Calentar una plancha a fuego muy alto.",
+        "Hacer los panes brioche cortados por la mitad sobre la plancha con un toque suave de mantequilla hasta dorar ligeramente.",
+        "Cocinar la carne de ternera en la plancha durante 3 minutos por lado para que quede tierna y jugosa al centro.",
+        "Colocar la rodaja de queso cheddar encima de la carne caliente el último minuto agregando unas gotas de agua en la plancha para vaporizar y fundir perfectamente.",
+        "Armar la hamburguesa colocando en la base de pan brioche los brotes, luego la carne fundida.",
+        "Coronar con cebolla caramelizada pochada y la salsa de mostaza e higos antes de tapar con el brioche."
+      ]
+    },
+    {
+      id: "r12",
+      title: "Gazpacho Andaluz Tradicional",
+      category: "Saludable",
+      stars: 4.8,
+      time: 10,
+      image: "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&q=80&w=600",
+      description: "Clásica y refrescante sopa fría de tomates pera bien maduros, pepino y aceite de oliva virgen extra.",
+      ingredients: ["1kg de tomates pera maduros", "1/2 pimiento verde italiano", "1/2 pepino pelado", "1 diente de ajo pequeño (sin el germen interior)", "50ml de aceite de oliva virgen extra de alta calidad", "2 cucharadas de vinagre de Jerez", "Pizca de sal", "Agua fría al gusto"],
+      steps: [
+        "Lavar perfectamente todos los ingredientes frescos del campo.",
+        "Colocar en el vaso de la licuadora o trituradora potente los tomates enteros pelados, el pimiento troceado, el pepino y el ajo.",
+        "Triturar a máxima potencia durante varios minutos hasta conseguir una emulsión fina.",
+        "Añadir el aceite de oliva poco a poco mientras se bate para ligar la mezcla, junto con la sal y el vinagre de Jerez.",
+        "Pasar la crema por un colador chino para retirar restos finos de pieles.",
+        "Refrigerar al menos 2 horas antes de servir para disfrutarlo helado en tazas o vasos de cristal."
+      ]
+    },
+    {
+      id: "r13",
+      title: "Gnocchi de Calabaza con Salvia",
+      category: "Confort",
+      stars: 4.5,
+      time: 25,
+      image: "https://images.unsplash.com/photo-1621996346565-e3bb627add2e?auto=format&fit=crop&q=80&w=600",
+      description: "Gnocchis italianos hechos de calabaza asada, acompañados de una salsa ligera de mantequilla noisette y hojas de salvia crujiente.",
+      ingredients: ["400g de gnocchis de calabaza de buena calidad", "40g de mantequilla pura cien por cien", "6-8 hojas de salvia fresca", "50g de queso pecorino o parmesano rallado al momento", "Pizca de pimienta negra ahumada", "20g de nueces pecanas tostadas troceadas"],
+      steps: [
+        "Hervir abundante agua con sal en una cazo grande e introducir los gnocchi de calabaza.",
+        "Cocinar los gnocchi hasta que suban a la superficie, señal de que están listos, y escurrir reservando un cazo de agua caliente de cocción.",
+        "Mientras tanto, calentar una sárten a fuego medio y derretir la mantequilla lentamente hasta que empiece a dorarse y huela a nuez (mantequilla noisette).",
+        "Añadir las hojas de salvia a la mantequilla hasta que queden un poco fritas y crujientes.",
+        "Incorporar los gnocchi escurridos a la sartén junto con el chorrito de agua de cocción para ligar una salsa untuosa.",
+        "Servir inmediatamente con el queso pecorino rallado y las nueces tostadas crujientes por encima."
+      ]
+    },
+    {
+      id: "r14",
+      title: "Wok de Fideos y Ternera",
+      category: "Almuerzo",
+      stars: 4.7,
+      time: 20,
+      image: "https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?auto=format&fit=crop&q=80&w=600",
+      description: "Fideos udon salteados al fuego vivo en wok con tiras de ternera marinada, brócoli, pimientos y salsa de sésamo.",
+      ingredients: ["250g de fideos udon o soba listos", "200g de lomo de ternera fileteado en tiras", "1/2 taza de flores de brócoli", "1/2 pimiento rojo cortado en tiras", "Salsa wok: 3 cdas de salsa de soja, 1 cda de aceite de sésamo refinado, 1 diente de ajo rallado y canela molida"],
+      steps: [
+        "Marinar las finas tiras de ternera con el diente de ajo rallado y un poco de salsa de soja por 10 minutos.",
+        "Preparar los fideos udon según sea de hidratarlos y escurrir.",
+        "Calentar al máximo de potencia el wok tradicional o sartén honda con una cucharada de aceite.",
+        "Saltear la carne de ternera a fuego muy vivo durante unos 3 minutos hasta dorar y retirar.",
+        "En el mismo wok caliente, añadir el brócoli y pimiento salteándolos 3-4 minutos para que queden tiernos.",
+        "Volver a introducir la carne, verter los fideos calientes y regar con el tarro de salsa de sésamo de la casa."
+      ]
+    },
+    {
+      id: "r15",
+      title: "Chia Pudding de Frutos Rojos",
+      category: "Desayuno",
+      stars: 4.6,
+      time: 10,
+      image: "https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&q=80&w=600",
+      description: "Un pudin saludable hecho a base de semillas de chía hidratadas en leche de almendras, cubierto con mermelada rápida de frambuesa.",
+      ingredients: ["3 cucharadas de semillas de chía orgánicas", "150ml de leche de almendras sin azúcar", "1 cucharadita de extracto de vainilla natural", "1 cucharadita de jarabe de agave puro", "1/2 taza de frambuesas y fresas frescas molidas", "Unas ramitas de menta fresca"],
+      steps: [
+        "En un bote de vidrio, mezclar con esmero las semillas de chía con la leche de almendras, vainilla y sirope de agave.",
+        "Dejar reposar 10 minutos en la encimera y volver a mezclar para evitar grumos.",
+        "Tapar el envase y mantener refrigerando mínimo 4 horas, idealmente toda la noche, para que el mucílago de la chía espese.",
+        "Preparar un puré rápido de fruta machacando con tenedor las frambuesas y las fresas.",
+        "Servir en una taza transparente sirviendo el pudin de chía cuajado y coronando con la salsa de frutos rojos.",
+        "Pasar la menta fresca para decorar antes del disfrute por la mañana."
+      ]
+    },
+    {
+      id: "r16",
+      title: "Dorada al Horno Panadera",
+      category: "Cena",
+      stars: 4.9,
+      time: 30,
+      image: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&q=80&w=600",
+      description: "Filete de dorada fresca horneado lentamente sobre una base de patatas panaderas tiernas y rodajas de cebolla dulce juliana.",
+      ingredients: ["1 dorada limpia entera de la ría", "2 patatas medianas peladas", "1 cebolla dulce grande", "75ml de vino blanco de mesa", "50ml de aceite de oliva", "1 limón rodajas", "Sal y ajo en polvo"],
+      steps: [
+        "Cortar las patatas peladas en rodajas finas (panaderas) al igual que la cebolla en juliana.",
+        "Precalentar el horno a 190°C con aire.",
+        "Disponer las patatas y cebolla en una bandeja con aceite, sal y el vino blanco horneando por 15 minutos hasta ablandar.",
+        "Hacer unos cortes finos en los lomos del pescado e introducir rodajas de limón en ellos.",
+        "Sazonar el pescado y colocarlo sobre la cama de patatas precocidas.",
+        "Hornear otros 12-15 minutos según espesor hasta que el pescado esté blanco y nacarado en su punto idóneo de hidratación."
+      ]
+    },
+    {
+      id: "r17",
+      title: "Crema de Calabaza y Jengibre",
+      category: "Saludable",
+      stars: 4.7,
+      time: 25,
+      image: "https://images.unsplash.com/photo-1476124369491-e7addf5db371?auto=format&fit=crop&q=80&w=600",
+      description: "Crema reconfortante repleta de nutrientes a base de calabaza butternut, zanahoria y un toque de jengibre fresco.",
+      ingredients: ["600g de calabaza butternut pelada", "2 zanahorias grandes", "1 puerro y 1 patata mediana", "1 trocito pequeño de jengibre fresco rallado", "1 cucharada de aceite de oliva virgen extra", "Pizca de sal y pimienta blanca", "Semillas de calabaza para adornar"],
+      steps: [
+        "Trocear la calabaza, zanahorias, puerro y patata limpia.",
+        "En una cazuela con aceite de oliva saltear el puerro y patata por 3 minutos.",
+        "Incorporar la calabaza y zanahoria, cubriendo con agua caliente o caldo casero.",
+        "Cocer a fuego medio por unos 20 minutos hasta que todos los ingredientes estén tiernos.",
+        "Llevar al procesador añadiendo el trozo de jengibre de raíz rallado al instante, triturando hasta que se logre una crema fina.",
+        "Servir templado coronado con semillas de calabaza tostadas y un hilo de aceite."
+      ]
+    },
+    {
+      id: "r18",
+      title: "Hummus de Garbanzo con Pita",
+      category: "Cena",
+      stars: 4.8,
+      time: 12,
+      image: "https://images.unsplash.com/photo-1547058886-af77d90d5721?auto=format&fit=crop&q=80&w=600",
+      description: "Crema de garbanzos cocidos tradicional con pasta tahini de sésamo, limón, ajo y pimentón ahumado.",
+      ingredients: ["400g de garbanzos cocidos escurridos", "2 cucharadas soperas de crema Tahini de sésamo tostado", "1 cucharadita de comino molido", "1 chorrito de limón recién cortado", "1 cucharada de aceite de oliva virgen extra", "Agua helada al gusto", "Pan de pita integral para dipear"],
+      steps: [
+        "Enjuagar los garbanzos cocidos bajo chorro de agua fría.",
+        "Introducir en el vaso batidor los garbanzos escurridos con la pasta de tahini, el limón, comino y una de sal.",
+        "Licuar añadiendo el ajo y un piquito de agua helada que ayudará a conseguir una de textura sedosa.",
+        "Emplatar alisando la superficie del hummus formando una silueta con la cuchara.",
+        "Verter abundante aceite de oliva virgen extra y espolvorear pimentón ahumado por encima.",
+        "Calentar el pan de pita en un tostador y cortar en triángulos para servir de acompañamiento inmediato."
       ]
     }
   ];
@@ -286,6 +506,15 @@ export default function Home() {
           }
         }
 
+        const storedFavorites = localStorage.getItem("menucheck_favorites");
+        if (storedFavorites) {
+          try {
+            setFavorites(JSON.parse(storedFavorites));
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
         const storedUser = localStorage.getItem("menucheck_user");
         if (storedUser) {
           try {
@@ -316,6 +545,13 @@ export default function Home() {
     }
   }, [pantryItems]);
 
+  // Save Favorites whenever it changes
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("menucheck_favorites", JSON.stringify(favorites));
+    }
+  }, [favorites]);
+
   // Scroll to bottom of chat
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -323,6 +559,15 @@ export default function Home() {
 
 
   // --- Helper Methods & Event Handlers ---
+
+  // Toggle favorite state of a recipe
+  const toggleFavorite = (recipeId: string) => {
+    setFavorites(prev => 
+      prev.includes(recipeId) 
+        ? prev.filter(id => id !== recipeId) 
+        : [...prev, recipeId]
+    );
+  };
 
   // Handle standard simulated password log-in
   const handleLoginSubmit = (e: React.FormEvent) => {
@@ -483,11 +728,54 @@ export default function Home() {
     setChatInput(text);
   };
 
-  // Filter recipes based on category selection tag & search input text
+  // Format current date nicely in Spanish for the daily menu
+  const getFormattedTodayDate = () => {
+    const options: Intl.DateTimeFormatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('es-ES', options);
+    return dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+  };
+
+  // Select daily dynamic recommended meals based on the current day's numeric date seed
+  const getDailyRecommendations = (): Recipe[] => {
+    if (!recipes || recipes.length === 0) return [];
+    
+    // Create a seed based on day, month, and year to ensure stable change every day
+    const now = new Date();
+    const daySeed = now.getDate() + now.getMonth() * 31 + (now.getFullYear() - 2026) * 365;
+    
+    const desayunos = recipes.filter(r => r.category === "Desayuno");
+    const almuerzos = recipes.filter(r => r.category === "Almuerzo");
+    const cenas = recipes.filter(r => r.category === "Cena" || r.category === "Confort");
+    const saludables = recipes.filter(r => r.category === "Saludable");
+    
+    const recs: Recipe[] = [];
+    
+    if (desayunos.length > 0) {
+      recs.push(desayunos[daySeed % desayunos.length]);
+    }
+    if (almuerzos.length > 0) {
+      recs.push(almuerzos[(daySeed + 3) % almuerzos.length]);
+    }
+    if (cenas.length > 0) {
+      recs.push(cenas[(daySeed + 7) % cenas.length]);
+    } else if (saludables.length > 0) {
+      recs.push(saludables[(daySeed + 13) % saludables.length]);
+    }
+    
+    return recs;
+  };
+
+  const dailyRecipes = getDailyRecommendations();
+
+  // Filter recipes based on category selection tag & search input text (including ingredients)
   const filteredRecipes = recipes.filter(recipe => {
     const matchesSearch = recipe.title.toLowerCase().includes(recipeSearch.toLowerCase()) || 
-                          recipe.description.toLowerCase().includes(recipeSearch.toLowerCase());
-    const matchesCategory = activeCategoryFilter === "Todos" || recipe.category === activeCategoryFilter;
+                          recipe.description.toLowerCase().includes(recipeSearch.toLowerCase()) ||
+                          recipe.ingredients.some(ing => ing.toLowerCase().includes(recipeSearch.toLowerCase()));
+    
+    const matchesCategory = activeCategoryFilter === "Todos" || 
+                            (activeCategoryFilter === "Favoritos" ? favorites.includes(recipe.id) : recipe.category === activeCategoryFilter);
     return matchesSearch && matchesCategory;
   });
 
@@ -930,7 +1218,7 @@ export default function Home() {
 
                     {/* Quick Category filter tabs list */}
                     <div className="flex items-center gap-2 overflow-x-auto pb-1.5 scrollbar-none">
-                      {["Todos", "Desayuno", "Almuerzo", "Cena", "Saludable", "Confort"].map((cat) => (
+                      {["Todos", "Favoritos", "Desayuno", "Almuerzo", "Cena", "Saludable", "Confort"].map((cat) => (
                         <button
                           key={cat}
                           onClick={() => setActiveCategoryFilter(cat)}
@@ -954,7 +1242,7 @@ export default function Home() {
                         type="text"
                         value={recipeSearch}
                         onChange={(e) => setRecipeSearch(e.target.value)}
-                        placeholder="Buscar por ingredientes o recetas (ej: aguacate, salmón...)"
+                        placeholder="Buscar por ingredientes o recetas (ej: aguacate, salmón, puerro, garbanzos...)"
                         className="w-full h-11 pl-10 pr-4 rounded-md border border-gray-300 bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-[#3498db] transition-all outline-none text-sm text-[#1c1e21]"
                       />
                       {recipeSearch && (
@@ -979,6 +1267,90 @@ export default function Home() {
                     </button>
                   </div>
 
+                  {/* MENÚ DEL DÍA (DYNAMICS: CHANGES EVERY SINGLE DAY BASED ON DATE) */}
+                  {recipeSearch === "" && activeCategoryFilter === "Todos" && dailyRecipes.length > 0 && (
+                    <div className="bg-gradient-to-r from-teal-50/60 to-blue-50/60 border border-slate-200/90 rounded-2xl p-5 mb-2 shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 border-b border-gray-100 pb-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-2 bg-gradient-to-br from-teal-400 to-[#3498db] rounded-xl text-white shadow-sm">
+                            <Sparkles className="w-5 h-5 animate-pulse" />
+                          </div>
+                          <div>
+                            <h3 className="font-extrabold text-[#2c3e50] text-base flex items-center gap-1.5">
+                              🍽️ Menú Recomendado para Hoy
+                            </h3>
+                            <p className="text-xs text-gray-600 font-medium">
+                              {getFormattedTodayDate()} • Selección gastronómica diaria rotativa
+                            </p>
+                          </div>
+                        </div>
+                        <span className="text-[10px] bg-slate-200/80 text-slate-800 px-3 py-1 rounded-full font-bold uppercase tracking-wider flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-[#2c3e50]" />
+                          Cambia cada 24 horas
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {dailyRecipes.map((recipe) => {
+                          const isFav = favorites.includes(recipe.id);
+                          return (
+                            <div 
+                              key={`daily-${recipe.id}`}
+                              className="bg-white rounded-xl p-4 border border-slate-100 flex flex-col justify-between hover:shadow-md transition-all duration-300 group relative shadow-xs"
+                            >
+                              {/* Top category label and absolute heart button */}
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className={`text-[9px] font-extrabold tracking-wider uppercase px-2 py-0.5 rounded-md border ${
+                                  recipe.category === "Desayuno" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                                  recipe.category === "Almuerzo" ? "bg-slate-100 text-slate-850 border-slate-300" :
+                                  recipe.category === "Cena" ? "bg-emerald-50 text-emerald-800 border-emerald-200" :
+                                  recipe.category === "Saludable" ? "bg-teal-50 text-teal-850 border-teal-200" :
+                                  "bg-amber-50 text-amber-800 border-amber-200"
+                                }`}>
+                                  {recipe.category}
+                                </span>
+
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFavorite(recipe.id);
+                                  }}
+                                  className="p-1.5 rounded-full hover:bg-rose-50 text-gray-300 hover:text-rose-500 transition-colors"
+                                  title={isFav ? "Quitar de favoritos" : "Añadir a favoritos"}
+                                >
+                                  <Heart className={`w-4.5 h-4.5 transition-all text-gray-400 ${isFav ? "fill-rose-500 text-rose-500 scale-110" : "hover:text-rose-500"}`} />
+                                </button>
+                              </div>
+
+                              <div className="my-1">
+                                <h4 className="font-bold text-sm text-[#2c3e50] group-hover:text-[#3498db] transition-colors line-clamp-1">
+                                  {recipe.title}
+                                </h4>
+                                <p className="text-xs text-gray-500 line-clamp-1 mt-1 leading-relaxed">
+                                  {recipe.description}
+                                </p>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-3 border-t border-gray-100 mt-3">
+                                <span className="text-[11px] text-gray-400 font-bold flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5" />
+                                  <span>{recipe.time} min</span>
+                                </span>
+                                <button
+                                  onClick={() => setSelectedRecipe(recipe)}
+                                  className="text-xs text-blue-600 hover:text-blue-800 font-bold flex items-center gap-0.5 group-hover:translate-x-1 transition-transform"
+                                >
+                                  <span>Ver receta</span>
+                                  <ChevronRight className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Recipes Cards Grid Section */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredRecipes.length > 0 ? (
@@ -1002,6 +1374,23 @@ export default function Home() {
                                 {recipe.category}
                               </span>
                             </div>
+
+                            {/* Floating Favorite (Heart) Toggle Button */}
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                toggleFavorite(recipe.id);
+                              }}
+                              className="absolute top-3 right-3 z-10 p-2 rounded-full bg-white/90 hover:bg-white text-gray-450 hover:text-rose-500 hover:scale-105 active:scale-95 shadow-sm transition-all"
+                              title={favorites.includes(recipe.id) ? "Quitar de favoritos" : "Añadir a favoritos"}
+                            >
+                              <Heart 
+                                className={`w-4 h-4 transition-all ${
+                                  favorites.includes(recipe.id) ? "fill-rose-500 text-rose-500" : "text-gray-500 hover:text-rose-400"
+                                }`} 
+                              />
+                            </button>
 
                             <img 
                               src={recipe.image} 
@@ -1047,19 +1436,37 @@ export default function Home() {
                         </motion.div>
                       ))
                     ) : (
-                      <div className="col-span-full py-12 flex flex-col items-center justify-center text-center bg-white border border-[#c1c8c1]/30 rounded-2xl p-6">
-                        <UtensilsCrossed className="w-12 h-12 text-[#414943]/40 mb-3" />
-                        <h4 className="font-bold text-base text-[#191c1d]">No encontramos esa receta</h4>
-                        <p className="text-xs text-[#414943] max-w-sm mt-1 mb-4">
-                          Prueba a introducir otro ingrediente o palabra clave, o haz clic en &quot;Limpiar filtros&quot; para ver la lista inicial.
-                        </p>
-                        <button 
-                          onClick={() => { setRecipeSearch(""); setActiveCategoryFilter("Todos"); }}
-                          className="px-4 py-2 bg-[#3d6751] text-white text-xs font-bold rounded-xl"
-                        >
-                          Mostrar todas las recetas
-                        </button>
-                      </div>
+                      activeCategoryFilter === "Favoritos" ? (
+                        <div className="col-span-full py-16 flex flex-col items-center justify-center text-center bg-white border border-[#c1c8c1]/30 rounded-2xl p-6 shadow-xs">
+                          <div className="p-3.5 bg-rose-50 text-rose-500 rounded-full mb-3 animate-pulse">
+                            <Heart className="w-8 h-8 fill-rose-400" />
+                          </div>
+                          <h4 className="font-bold text-base text-[#191c1d]">Tu lista de Favoritos está vacía</h4>
+                          <p className="text-xs text-gray-500 max-w-sm mt-1.5 mb-5 leading-relaxed">
+                            Guarda tus comidas preferidas pulsando el icono del corazón 🤍 en cualquiera de las tarjetas de recetas para verlas juntas aquí.
+                          </p>
+                          <button 
+                            onClick={() => { setActiveCategoryFilter("Todos"); }}
+                            className="px-5 py-2.5 bg-[#2c3e50] hover:bg-[#34495e] text-white text-xs font-bold rounded-xl shadow-sm transition-all hover:-translate-y-0.5"
+                          >
+                            Explorar catálogo familiar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="col-span-full py-12 flex flex-col items-center justify-center text-center bg-white border border-[#c1c8c1]/30 rounded-2xl p-6">
+                          <UtensilsCrossed className="w-12 h-12 text-[#414943]/40 mb-3" />
+                          <h4 className="font-bold text-base text-[#191c1d]">No encontramos esa receta</h4>
+                          <p className="text-xs text-[#414943] max-w-sm mt-1 mb-4">
+                            Prueba a introducir otro ingrediente o palabra clave, o haz clic en &quot;Limpiar filtros&quot; para ver la lista inicial.
+                          </p>
+                          <button 
+                            onClick={() => { setRecipeSearch(""); setActiveCategoryFilter("Todos"); }}
+                            className="px-4 py-2 bg-[#2c3e50] text-white text-xs font-bold rounded-xl hover:bg-[#34495e]"
+                          >
+                            Mostrar todas las recetas
+                          </button>
+                        </div>
+                      )
                     )}
                   </div>
 
