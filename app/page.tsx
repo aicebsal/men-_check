@@ -32,7 +32,9 @@ import {
   Package, 
   Info,
   Send,
-  Lock
+  Lock,
+  Volume2,
+  VolumeX
 } from "lucide-react";
 
 // --- Types & Interfaces ---
@@ -100,6 +102,23 @@ export default function Home() {
 
   // Selected Recipe detail Modal
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+
+  // Speech synthesis audio reader status
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingIndex, setSpeakingIndex] = useState<number | null>(null); // null if not speaking, -1 for full description/ingredients, 0...N for specific step N
+
+  // Ensure speech synthesis cancels immediately when the modal is closed or changed
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
+    // Defer the state updates to next event loop cycle to avoid synchronous React render cascade warnings
+    const timer = setTimeout(() => {
+      setIsSpeaking(false);
+      setSpeakingIndex(null);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [selectedRecipe]);
 
   // Shopping List dynamic items state
   const [shoppingList, setShoppingList] = useState<ShoppingItem[]>([
@@ -567,6 +586,50 @@ export default function Home() {
         ? prev.filter(id => id !== recipeId) 
         : [...prev, recipeId]
     );
+  };
+
+  // Convert text contents to human speech (audio loudspeaker function)
+  const speakText = (text: string, index: number | null) => {
+    if (typeof window === "undefined" || !window.speechSynthesis) {
+      alert("La síntesis de voz no está soportada en este navegador.");
+      return;
+    }
+
+    // Toggle logic: if we are already speaking this exact section, click to stop
+    if (isSpeaking && speakingIndex === index) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setSpeakingIndex(null);
+      return;
+    }
+
+    // Cancel current speaking
+    window.speechSynthesis.cancel();
+
+    // Create utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "es-ES"; // Explicitly target Spanish matching app language
+
+    // On start
+    utterance.onstart = () => {
+      setIsSpeaking(true);
+      setSpeakingIndex(index);
+    };
+
+    // On complete / finish
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setSpeakingIndex(null);
+    };
+
+    // On exception / error
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setSpeakingIndex(null);
+    };
+
+    // Play!
+    window.speechSynthesis.speak(utterance);
   };
 
   // Handle standard simulated password log-in
@@ -2004,16 +2067,38 @@ export default function Home() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent" />
                 
-                <div className="absolute bottom-5 left-5 right-5 text-white">
-                  <span className="text-[9px] uppercase tracking-wider font-extrabold bg-[#3498db] text-white px-3 py-1 rounded-md">
-                    {selectedRecipe.category}
-                  </span>
-                  <h3 className="text-2xl font-extrabold mt-2 leading-tight">
-                    {selectedRecipe.title}
-                  </h3>
-                  <p className="text-xs text-white/90 font-medium mt-1">
-                    {selectedRecipe.description}
-                  </p>
+                <div className="absolute bottom-5 left-5 right-5 text-white flex items-end justify-between gap-4">
+                  <div className="flex-1">
+                    <span className="text-[9px] uppercase tracking-wider font-extrabold bg-[#3498db] text-white px-3 py-1 rounded-md">
+                      {selectedRecipe.category}
+                    </span>
+                    <h3 className="text-2xl font-extrabold mt-2 leading-tight">
+                      {selectedRecipe.title}
+                    </h3>
+                    <p className="text-xs text-white/90 font-medium mt-1">
+                      {selectedRecipe.description}
+                    </p>
+                  </div>
+
+                  {/* Speaker Button for full recipe, title and ingredients */}
+                  <button
+                    onClick={() => {
+                      const fullReadText = `Receta de ${selectedRecipe.title}. Categoría ${selectedRecipe.category}. ${selectedRecipe.description}. Los ingredientes necesarios son: ${selectedRecipe.ingredients.join(", ")}.`;
+                      speakText(fullReadText, -1);
+                    }}
+                    className={`p-3 rounded-full shadow-lg border backdrop-blur-md transition-all flex-shrink-0 ${
+                      isSpeaking && speakingIndex === -1 
+                        ? "bg-rose-500 border-rose-450 text-white animate-pulse" 
+                        : "bg-white/20 hover:bg-white/35 border-white/30 text-white hover:scale-105 active:scale-95"
+                    }`}
+                    title={isSpeaking && speakingIndex === -1 ? "Detener lectura" : "Escuchar receta e ingredientes"}
+                  >
+                    {isSpeaking && speakingIndex === -1 ? (
+                      <VolumeX className="w-5 h-5" />
+                    ) : (
+                      <Volume2 className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -2063,17 +2148,50 @@ export default function Home() {
                     <ChefHat className="w-4.5 h-4.5" />
                     <span>Pasos de Preparación</span>
                   </h4>
-                  <ol className="space-y-4">
-                    {selectedRecipe.steps.map((step, s) => (
-                      <li key={s} className="flex gap-3 text-xs md:text-[13px] leading-relaxed">
-                        <span className="w-5.5 h-5.5 rounded-full bg-[#2c3e50] text-white flex items-center justify-center text-[10px] font-extrabold flex-shrink-0">
-                          {s+1}
-                        </span>
-                        <p className="text-[#414943] font-medium pt-0.5">
-                          {step}
-                        </p>
-                      </li>
-                    ))}
+                  <ol className="space-y-3">
+                    {selectedRecipe.steps.map((step, s) => {
+                      const isReadingStep = isSpeaking && speakingIndex === s;
+                      return (
+                        <li 
+                          key={s} 
+                          className={`flex gap-3 text-xs md:text-[13px] leading-relaxed p-2 rounded-xl border transition-all ${
+                            isReadingStep 
+                              ? "bg-blue-50/70 border-blue-200 shadow-xs" 
+                              : "border-transparent hover:bg-slate-50/60"
+                          }`}
+                        >
+                          <span className={`w-5.5 h-5.5 rounded-full flex items-center justify-center text-[10px] font-extrabold flex-shrink-0 transition-colors ${
+                            isReadingStep ? "bg-blue-600 text-white" : "bg-[#2c3e50] text-white"
+                          }`}>
+                            {s+1}
+                          </span>
+                          <div className="flex-1">
+                            <p className={`font-medium transition-colors ${isReadingStep ? "text-blue-900 font-semibold" : "text-[#414943]"}`}>
+                              {step}
+                            </p>
+                          </div>
+                          
+                          {/* Mini speaker button for this step */}
+                          <button
+                            onClick={() => {
+                              speakText(`Paso ${s+1}: ${step}`, s);
+                            }}
+                            className={`p-1.5 rounded-lg border transition-all self-center flex-shrink-0 ${
+                              isReadingStep 
+                                ? "bg-rose-500 hover:bg-rose-600 text-white border-rose-500 scale-105 animate-pulse" 
+                                : "bg-slate-50 hover:bg-slate-100 text-gray-500 border-slate-200 hover:text-[#3498db] active:scale-95"
+                            }`}
+                            title={isReadingStep ? "Detener lectura de este paso" : `Escuchar paso ${s+1}`}
+                          >
+                            {isReadingStep ? (
+                              <VolumeX className="w-3.5 h-3.5" />
+                            ) : (
+                              <Volume2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </li>
+                      );
+                    })}
                   </ol>
                 </div>
 
