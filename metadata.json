@@ -1,0 +1,6 @@
+{
+  "name": "Menú Check",
+  "description": "Organización familiar con frescura y orden. Planificador de menús semanales, lista de compras integrada y asistente de cocina inteligente.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
