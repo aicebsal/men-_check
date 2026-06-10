@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account registration details",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "ShoppingListItem": {
+      "title": "ShoppingListItem",
+      "description": "An item in the user's shopping list",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "category": { "type": "string" },
+        "quantity": { "type": "string" },
+        "checked": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "category", "quantity", "checked"]
+    },
+    "PantryItem": {
+      "title": "PantryItem",
+      "description": "An item in the user's pantry status tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "emoji": { "type": "string" },
+        "statusText": { "type": "string" },
+        "percent": { "type": "integer" },
+        "addedToList": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "emoji", "statusText", "percent", "addedToList"]
+    },
+    "Favorite": {
+      "title": "Favorite",
+      "description": "A favorite recipe reference",
+      "type": "object",
+      "properties": {
+        "recipeId": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["recipeId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/users/{userId}/shoppingList/{itemId}": {
+      "schema": "ShoppingListItem",
+      "description": "The user's shopping list items"
+    },
+    "/users/{userId}/pantry/{pantryId}": {
+      "schema": "PantryItem",
+      "description": "The user's pantry item details"
+    },
+    "/users/{userId}/favorites/{recipeId}": {
+      "schema": "Favorite",
+      "description": "The user's favorite recipes mapping"
+    }
+  }
+}

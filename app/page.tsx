@@ -5,6 +5,19 @@ import {
   motion, 
   AnimatePresence 
 } from "motion/react";
+import { auth, db, googleProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "../lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  onSnapshot, 
+  collection, 
+  writeBatch,
+  updateDoc,
+  deleteDoc
+} from "firebase/firestore";
+
 import { 
   ShoppingBasket, 
   Heart, 
@@ -81,6 +94,22 @@ function makeUniqueId(prefix: string): string {
   return `${prefix}-${idCounter}-${rand}`;
 }
 
+// --- Default fallback data templates (loaded/seeded per account) ---
+const defaultShoppingList: ShoppingItem[] = [
+  { id: "1", name: "Manzanas Royal Gala", category: "Frutas y Verduras", quantity: "6 unidades", checked: false },
+  { id: "2", name: "Espinacas frescas", category: "Frutas y Verduras", quantity: "2 bolsas de 300g", checked: false },
+  { id: "3", name: "Leche Semidesnatada", category: "Lácteos y Huevos", quantity: "Pack 6L", checked: false },
+  { id: "4", name: "Yogurt Griego Natural", category: "Lácteos y Huevos", quantity: "Pack x4", checked: true },
+];
+
+const defaultPantryItems: PantryItem[] = [
+  { id: "p1", name: "Arroz Basmati", emoji: "🍚", statusText: "Queda ~20%", percent: 20, addedToList: false },
+  { id: "p2", name: "Pasta Penne", emoji: "🍝", statusText: "Queda ~10%", percent: 10, addedToList: false },
+  { id: "p3", name: "Café Molido", emoji: "☕", statusText: "Stock suficiente", percent: 90, addedToList: false },
+];
+
+const defaultFavorites: string[] = ["r2", "r6"];
+
 export default function Home() {
   // Navigation & Screen View state
   const [view, setView] = useState<"splash" | "login" | "dashboard" | "shopping-list" | "assistant">("splash");
@@ -92,9 +121,12 @@ export default function Home() {
     loggedIn: false
   });
 
-  // Login Form input state
+  // Login & Registration state values
   const [loginEmail, setLoginEmail] = useState("hola@familia.com");
   const [loginPassword, setLoginPassword] = useState("••••••••");
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerName, setRegisterName] = useState("");
+  const [loginError, setLoginError] = useState("");
 
   // Filter and Search states for recipes
   const [recipeSearch, setRecipeSearch] = useState("");
@@ -488,7 +520,7 @@ export default function Home() {
     }
   ];
 
-  // --- Initialize Client side localStorage data on Mount ---
+  // --- Initialize Firebase Sign-in listener and Real-time syncing ---
   useEffect(() => {
     // Generate lovely initial client side sparkles list to make the landing look dazzling and organic
     const initialSparkles = Array.from({ length: 18 }).map((_, i) => ({
@@ -498,78 +530,125 @@ export default function Home() {
       color: ["#a8d5ba", "#fecbcb", "#b1d865", "#ffdad9"][Math.floor(Math.random() * 4)],
       size: Math.random() * 10 + 6
     }));
-    
-    // Defer update slightly using timeout to guarantee pure effect checks
     setTimeout(() => {
       setSparkles(initialSparkles);
     }, 0);
 
-    // Hydrate state from localStorage if available (wrapped asynchronously to avoid hydration mismatches and cascading render warnings)
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        const storedList = localStorage.getItem("menucheck_shopping_list");
-        if (storedList) {
-          try {
-            setShoppingList(JSON.parse(storedList));
-          } catch (e) {
-            console.error(e);
+    // Set up Firebase Authentication listener
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        // Authenticated successfully!
+        const loggedUser = {
+          name: currentUser.displayName || currentUser.email?.split("@")[0] || "Usuario",
+          email: currentUser.email || "",
+          loggedIn: true,
+          uid: currentUser.uid
+        };
+        setUser(loggedUser);
+        setView("dashboard");
+
+        // Verify/Seed collections if user document doesn't exist yet
+        const userDocRef = doc(db, "users", currentUser.uid);
+        try {
+          const userSnap = await getDoc(userDocRef);
+          if (!userSnap.exists()) {
+            await setDoc(userDocRef, {
+              uid: currentUser.uid,
+              name: loggedUser.name,
+              email: currentUser.email,
+              createdAt: new Date().toISOString()
+            });
+
+            // Seed user specific default collections
+            const batch = writeBatch(db);
+
+            // 1. Seed default shopping items
+            defaultShoppingList.forEach((item) => {
+              const itemRef = doc(db, `users/${currentUser.uid}/shoppingList`, item.id);
+              batch.set(itemRef, {
+                ...item,
+                updatedAt: new Date().toISOString()
+              });
+            });
+
+            // 2. Seed default pantry items
+            defaultPantryItems.forEach((p) => {
+              const pantryRef = doc(db, `users/${currentUser.uid}/pantry`, p.id);
+              batch.set(pantryRef, {
+                ...p,
+                updatedAt: new Date().toISOString()
+              });
+            });
+
+            // 3. Seed default favorites
+            defaultFavorites.forEach((fid) => {
+              const favRef = doc(db, `users/${currentUser.uid}/favorites`, fid);
+              batch.set(favRef, {
+                recipeId: fid,
+                updatedAt: new Date().toISOString()
+              });
+            });
+
+            await batch.commit();
           }
+        } catch (err) {
+          console.error("Error creating/seeding user doc in Firestore:", err);
         }
 
-        const storedPantry = localStorage.getItem("menucheck_pantry");
-        if (storedPantry) {
-          try {
-            setPantryItems(JSON.parse(storedPantry));
-          } catch (e) {
-            console.error(e);
-          }
-        }
+        // Real-time Firestore Sync Listeners
+        const unsubShopping = onSnapshot(collection(db, `users/${currentUser.uid}/shoppingList`), (snapshot) => {
+          const items: ShoppingItem[] = [];
+          snapshot.forEach((doc) => {
+            items.push(doc.data() as ShoppingItem);
+          });
+          setShoppingList(items);
+        }, (error) => {
+          console.error("Firestore ShoppingList sync error:", error);
+        });
 
-        const storedFavorites = localStorage.getItem("menucheck_favorites");
-        if (storedFavorites) {
-          try {
-            setFavorites(JSON.parse(storedFavorites));
-          } catch (e) {
-            console.error(e);
-          }
-        }
+        const unsubPantry = onSnapshot(collection(db, `users/${currentUser.uid}/pantry`), (snapshot) => {
+          const items: PantryItem[] = [];
+          snapshot.forEach((doc) => {
+            items.push(doc.data() as PantryItem);
+          });
+          setPantryItems(items);
+        }, (error) => {
+          console.error("Firestore Pantry sync error:", error);
+        });
 
-        const storedUser = localStorage.getItem("menucheck_user");
-        if (storedUser) {
-          try {
-            const parsed = JSON.parse(storedUser);
-            setUser(parsed);
-            if (parsed.loggedIn) {
-              setView("dashboard");
+        const unsubFavorites = onSnapshot(collection(db, `users/${currentUser.uid}/favorites`), (snapshot) => {
+          const items: string[] = [];
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            if (data.recipeId) {
+              items.push(data.recipeId);
             }
-          } catch (e) {
-            console.error(e);
-          }
-        }
+          });
+          setFavorites(items);
+        }, (error) => {
+          console.error("Firestore Favorites sync error:", error);
+        });
+
+        return () => {
+          unsubShopping();
+          unsubPantry();
+          unsubFavorites();
+        };
+      } else {
+        // Logged out / Not logged in
+        setUser({
+          name: "Ainhoa Cebrián",
+          email: "ainhoacebrian@consolacionburriana.com",
+          loggedIn: false
+        });
+        setShoppingList([]);
+        setPantryItems([]);
+        setFavorites([]);
       }
-    }, 0);
+    });
+
+    return () => unsubscribeAuth();
   }, []);
-
-  // Save Shopping List whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("menucheck_shopping_list", JSON.stringify(shoppingList));
-    }
-  }, [shoppingList]);
-
-  // Save Pantry list whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("menucheck_pantry", JSON.stringify(pantryItems));
-    }
-  }, [pantryItems]);
-
-  // Save Favorites whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("menucheck_favorites", JSON.stringify(favorites));
-    }
-  }, [favorites]);
 
   // Scroll to bottom of chat
   useEffect(() => {
@@ -579,13 +658,26 @@ export default function Home() {
 
   // --- Helper Methods & Event Handlers ---
 
-  // Toggle favorite state of a recipe
-  const toggleFavorite = (recipeId: string) => {
-    setFavorites(prev => 
-      prev.includes(recipeId) 
-        ? prev.filter(id => id !== recipeId) 
-        : [...prev, recipeId]
-    );
+  // Toggle favorite state of a recipe in Firestore
+  const toggleFavorite = async (recipeId: string) => {
+    if (!user.loggedIn || !auth.currentUser) {
+      alert("Inicia sesión para poder guardar recetas favoritas.");
+      return;
+    }
+
+    try {
+      const favRef = doc(db, `users/${auth.currentUser.uid}/favorites`, recipeId);
+      if (favorites.includes(recipeId)) {
+        await deleteDoc(favRef);
+      } else {
+        await setDoc(favRef, {
+          recipeId: recipeId,
+          updatedAt: new Date().toISOString()
+        });
+      }
+    } catch (err) {
+      console.error("Error toggling favorite recipe in Firestore:", err);
+    }
   };
 
   // Convert text contents to human speech (audio loudspeaker function)
@@ -632,69 +724,155 @@ export default function Home() {
     window.speechSynthesis.speak(utterance);
   };
 
-  // Handle standard simulated password log-in
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Handle standard Firebase Authentication login and registration
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = { ...user, loggedIn: true };
-    setUser(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("menucheck_user", JSON.stringify(updated));
+    setLoginError("");
+
+    const email = loginEmail.trim().toLowerCase();
+    const password = loginPassword;
+
+    if (isRegistering) {
+      // REGISTRATION MODE WITH FIREBASE
+      if (!registerName.trim()) {
+        setLoginError("Por favor, introduce tu nombre.");
+        return;
+      }
+      if (!email || !password) {
+        setLoginError("Por favor, rellena todos los campos.");
+        return;
+      }
+
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const registeredUser = userCredential.user;
+        
+        // Update user profile display name
+        const { updateProfile } = await import("firebase/auth");
+        await updateProfile(registeredUser, { displayName: registerName.trim() });
+        
+        // State updates will be handled dynamically in onAuthStateChanged
+        setIsRegistering(false);
+        setRegisterName("");
+        setLoginError("");
+      } catch (error: any) {
+        console.error("Firebase registration error:", error);
+        let errorMsg = "Ocurrió un error al registrar la cuenta.";
+        if (error.code === "auth/email-already-in-use") {
+          errorMsg = "Esta dirección de correo electrónico ya está registrada.";
+        } else if (error.code === "auth/invalid-email") {
+          errorMsg = "El correo electrónico no es válido.";
+        } else if (error.code === "auth/weak-password") {
+          errorMsg = "La contraseña debe tener al menos 6 caracteres.";
+        }
+        setLoginError(errorMsg);
+      }
+    } else {
+      // LOGIN MODE WITH FIREBASE
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        setLoginError("");
+      } catch (error: any) {
+        console.error("Firebase login error:", error);
+        let errorMsg = "El correo electrónico o la contraseña son incorrectos.";
+        if (
+          error.code === "auth/invalid-credential" || 
+          error.code === "auth/wrong-password" || 
+          error.code === "auth/user-not-found"
+        ) {
+          errorMsg = "La contraseña o el correo ingresados son incorrectos. Inténtalo de nuevo.";
+        } else if (error.code === "auth/invalid-email") {
+          errorMsg = "El correo electrónico no es válido.";
+        }
+        setLoginError(errorMsg);
+      }
     }
-    setView("dashboard");
   };
 
-  // Google Login simulated bypass
-  const handleGoogleLogin = () => {
-    const updated = { ...user, loggedIn: true };
-    setUser(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("menucheck_user", JSON.stringify(updated));
+  // Google Login popup standard authentication
+  const handleGoogleLogin = async () => {
+    setLoginError("");
+    try {
+      await signInWithPopup(auth, googleProvider);
+    } catch (error: any) {
+      console.error("Firebase Google login error:", error);
+      if (error.code !== "auth/popup-closed-by-user") {
+        setLoginError("Ocurrió un error al iniciar sesión con Google. Inténtalo de nuevo.");
+      }
     }
-    setView("dashboard");
   };
 
-  // Simulated Log Out
-  const handleLogOut = () => {
-    const updated = { ...user, loggedIn: false };
-    setUser(updated);
-    if (typeof window !== "undefined") {
-      localStorage.setItem("menucheck_user", JSON.stringify(updated));
+  // Modern Sign Out procedure
+  const handleLogOut = async () => {
+    setLoginError("");
+    setLoginEmail("hola@familia.com");
+    setLoginPassword("••••••••");
+    setIsRegistering(false);
+    try {
+      await signOut(auth);
+      setView("splash");
+    } catch (error) {
+      console.error("Firebase sign out error:", error);
     }
-    setView("splash");
   };
 
-  // Toggle Shopping List check state
-  const toggleItemChecked = (id: string) => {
-    setShoppingList(prev => 
-      prev.map(item => item.id === id ? { ...item, checked: !item.checked } : item)
-    );
+  // Toggle Shopping List check state in Firestore
+  const toggleItemChecked = async (id: string) => {
+    if (!user.loggedIn || !auth.currentUser) return;
+    try {
+      const item = shoppingList.find(i => i.id === id);
+      if (item) {
+        const itemRef = doc(db, `users/${auth.currentUser.uid}/shoppingList`, id);
+        await updateDoc(itemRef, { checked: !item.checked, updatedAt: new Date().toISOString() });
+      }
+    } catch (err) {
+      console.error("Error setting item checked state in Firestore:", err);
+    }
   };
 
-  // Delete a Shopping List item
-  const deleteItem = (id: string) => {
-    setShoppingList(prev => prev.filter(item => item.id !== id));
+  // Delete a Shopping List item from Firestore
+  const deleteItem = async (id: string) => {
+    if (!user.loggedIn || !auth.currentUser) return;
+    try {
+      const itemRef = doc(db, `users/${auth.currentUser.uid}/shoppingList`, id);
+      await deleteDoc(itemRef);
+    } catch (err) {
+      console.error("Error deleting item from Firestore:", err);
+    }
   };
 
   // Add custom typed item
-  const handleAddCustomItem = (e: React.FormEvent) => {
+  const handleAddCustomItem = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newItemName.trim()) return;
+    if (!user.loggedIn || !auth.currentUser) return;
 
+    const newItemId = makeUniqueId("custom");
     const newItem: ShoppingItem = {
-      id: makeUniqueId("custom"),
+      id: newItemId,
       name: newItemName.trim(),
       category: newItemCategory,
       quantity: newItemQuantity,
       checked: false
     };
 
-    setShoppingList(prev => [...prev, newItem]);
-    setNewItemName("");
-    setNewItemQuantity("1 unidad");
+    try {
+      const itemRef = doc(db, `users/${auth.currentUser.uid}/shoppingList`, newItemId);
+      await setDoc(itemRef, {
+        ...newItem,
+        updatedAt: new Date().toISOString()
+      });
+      setNewItemName("");
+      setNewItemQuantity("1 unidad");
+    } catch (err) {
+      console.error("Error adding custom item to Firestore:", err);
+    }
   };
 
   // Add a quick item from pantry view list
-  const addPantryItemToShoppingList = (pantryId: string, name: string) => {
+  const addPantryItemToShoppingList = async (pantryId: string, name: string) => {
+    if (!user.loggedIn || !auth.currentUser) return;
+
     // Check if it already exists to prevent duplication
     const exists = shoppingList.some(item => item.name.toLowerCase() === name.toLowerCase() && !item.checked);
     if (exists) {
@@ -702,30 +880,58 @@ export default function Home() {
       return;
     }
 
+    const newItemId = makeUniqueId("pantry-add");
     const newItem: ShoppingItem = {
-      id: makeUniqueId("pantry-add"),
+      id: newItemId,
       name: name,
       category: "Otros",
       quantity: "1 unidad",
       checked: false
     };
 
-    setShoppingList(prev => [...prev, newItem]);
-    setPantryItems(prev => 
-      prev.map(p => p.id === pantryId ? { ...p, addedToList: true } : p)
-    );
+    try {
+      const batch = writeBatch(db);
+      // Update pantry addedToList state
+      const pantryRef = doc(db, `users/${auth.currentUser.uid}/pantry`, pantryId);
+      batch.update(pantryRef, { addedToList: true });
 
-    // Auto reset "added" notification shortly
-    setTimeout(() => {
-      setPantryItems(prev => 
-        prev.map(p => p.id === pantryId ? { ...p, addedToList: false } : p)
-      );
-    }, 2000);
+      // Add to shoppingList collection
+      const itemRef = doc(db, `users/${auth.currentUser.uid}/shoppingList`, newItemId);
+      batch.set(itemRef, {
+        ...newItem,
+        updatedAt: new Date().toISOString()
+      });
+
+      await batch.commit();
+
+      // Auto reset "added" notification shortly
+      setTimeout(async () => {
+        if (auth.currentUser) {
+          const pRef = doc(db, `users/${auth.currentUser.uid}/pantry`, pantryId);
+          await updateDoc(pRef, { addedToList: false }).catch(() => {});
+        }
+      }, 2000);
+    } catch (err) {
+      console.error("Error adding pantry item to shopping list in Firestore:", err);
+    }
   };
 
   // Clear checked items to clear spacing clutter
-  const handleClearCheckedItems = () => {
-    setShoppingList(prev => prev.filter(item => !item.checked));
+  const handleClearCheckedItems = async () => {
+    if (!user.loggedIn || !auth.currentUser) return;
+    const checkedItems = shoppingList.filter(item => item.checked);
+    if (checkedItems.length === 0) return;
+
+    try {
+      const batch = writeBatch(db);
+      checkedItems.forEach(item => {
+        const itemRef = doc(db, `users/${auth.currentUser!.uid}/shoppingList`, item.id);
+        batch.delete(itemRef);
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error("Error clearing checked items from Firestore:", err);
+    }
   };
 
   // Call the server side backend route to message Gemini API
@@ -951,9 +1157,6 @@ export default function Home() {
           </motion.main>
         )}
 
-        {/* -------------------------------------------------------------
-            SCREEN VIEW 2: AUTH / SIGN IN & SIGN UP (Matching Slide 2 Extremely, LOCAL MODE!)
-            ------------------------------------------------------------- */}
         {view === "login" && (
           <motion.main
             key="login-screen"
@@ -963,7 +1166,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
             className="flex-1 w-full min-h-[90vh] flex flex-col items-center justify-center p-4 bg-[#f0f2f5]"
           >
-            <div className="w-full max-w-[440px] flex flex-col gap-6">
+            <div className="w-full max-w-[420px] flex flex-col gap-6">
               
               {/* Header section (Fidelity with slide 2 in high density style) */}
               <header className="text-center flex flex-col items-center gap-3">
@@ -980,116 +1183,61 @@ export default function Home() {
                   Bienvenido a Menú Check
                 </h2>
                 <p className="text-gray-500 text-sm">
-                  Tu organización familiar con frescura y orden
+                  Tu organización familiar con frescura, orden y sincronización en la nube
                 </p>
               </header>
 
-              {/* Login container box - High Density clean card design */}
-              <section className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-5">
+              {/* Login container box - Hardened Minimalist Google Auth style */}
+              <section className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-6">
                 
-                <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
-                  
-                  {/* Email block */}
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
-                      Email
-                    </label>
-                    <input 
-                      type="email" 
-                      required
-                      value={loginEmail}
-                      onChange={(e) => setLoginEmail(e.target.value)}
-                      placeholder="hola@familia.com"
-                      className="w-full h-11 px-4 rounded-md border border-gray-300 bg-gray-50/50 focus:border-[#3498db] focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm text-[1c1e21]"
-                    />
-                  </div>
-
-                  {/* Password block */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between items-center px-1">
-                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wider">
-                        Contraseña
-                      </label>
-                      <button 
-                        type="button"
-                        onClick={() => alert("Simulación: Enlace de recuperación enviado al correo local.")}
-                        className="text-xs font-semibold text-[#3498db] hover:underline"
-                      >
-                        ¿Olvidaste la clave?
-                      </button>
+                {/* Error handling notification toast/block */}
+                {loginError && (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-semibold flex items-start gap-2 animate-shake">
+                    <span className="text-sm">⚠️</span>
+                    <div className="flex-1 leading-normal">
+                      {loginError}
                     </div>
-                    <input 
-                      type="password" 
-                      required
-                      value={loginPassword}
-                      onChange={(e) => setLoginPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full h-11 px-4 rounded-md border border-gray-300 bg-gray-50/50 focus:border-[#3498db] focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm text-[1c1e21]"
-                    />
                   </div>
+                )}
 
-                  {/* Submit login */}
-                  <button 
-                    type="submit"
-                    className="w-full h-11 mt-2 bg-[#2c3e50] hover:bg-[#34495e] text-white font-bold rounded-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm text-sm"
-                  >
-                    Iniciar Sesión (Modo Local)
-                  </button>
-                </form>
-
-                {/* Divider */}
-                <div className="relative flex items-center py-2">
-                  <div className="flex-grow border-t border-gray-200" />
-                  <span className="flex-shrink mx-4 text-[10px] uppercase tracking-wider font-extrabold text-gray-400">
-                    O continúa con
-                  </span>
-                  <div className="flex-grow border-t border-gray-200" />
+                <div className="flex flex-col gap-4 text-center">
+                  <div className="text-sm text-gray-600 leading-relaxed">
+                    Para asegurar que tu lista de la compra, despensa y menús guardados estén siempre disponibles en todos tus dispositivos, conéctate de forma rápida y segura.
+                  </div>
                 </div>
 
-                {/* Social Login Options */}
-                <div className="flex flex-col gap-3">
-                  {/* Google Login Visual Bypass */}
-                  <button 
-                    onClick={handleGoogleLogin}
-                    className="w-full h-11 bg-white border border-gray-300 text-gray-800 font-semibold text-sm rounded-md flex items-center justify-center gap-3 hover:bg-gray-50 transition-colors active:scale-[0.98]"
-                  >
-                    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335" />
-                    </svg>
-                    <span>Iniciar sesión con Google</span>
-                  </button>
-
-                  {/* Create Account styled crisp blue */}
-                  <button 
-                    onClick={handleGoogleLogin}
-                    className="w-full h-11 bg-blue-50 hover:bg-blue-100 text-[#3498db] border border-blue-200 font-bold text-sm rounded-md active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span>Crear cuenta familiar</span>
-                  </button>
-                </div>
+                {/* Google login Button */}
+                <button 
+                  onClick={handleGoogleLogin}
+                  className="w-full h-12 bg-[#2c3e50] hover:bg-[#34495e] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-3 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                >
+                  <svg className="w-5 h-5 flex-shrink-0 bg-white p-0.5 rounded-full" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335" />
+                  </svg>
+                  <span>Iniciar sesión con Google</span>
+                </button>
               </section>
 
               {/* Verified badge and footer */}
               <footer className="flex flex-col items-center gap-3 text-xs text-gray-500">
                 <div className="flex items-center gap-1.5 font-semibold">
-                  <Lock className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Protegido por almacenamiento local seguro</span>
+                  <Lock className="w-3.5 h-3.5 text-[#3498db]" />
+                  <span>Conexión cifrada con Firebase Authentication</span>
                 </div>
                 <div className="flex items-center gap-3 font-bold text-[#3498db]">
-                  <a href="#" onClick={(e) => { e.preventDefault(); alert("Enlace simulado de Términos"); }} className="hover:underline">Términos</a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); alert("Contacto: Burriana, España"); }} className="hover:underline">Soporte</a>
                   <span className="w-1 h-1 rounded-full bg-gray-300" />
-                  <a href="#" onClick={(e) => { e.preventDefault(); alert("Enlace simulado de Privacidad"); }} className="hover:underline">Privacidad</a>
+                  <a href="#" onClick={(e) => { e.preventDefault(); alert("Aplicación educativa Menú Check"); }} className="hover:underline">Información</a>
                 </div>
 
-                {/* Local Mode explanation footnote */}
+                {/* Cloud sync explanation footnote */}
                 <div className="mt-2 flex flex-col items-center border border-gray-200 rounded-md p-3 bg-white text-center text-[10.5px] max-w-sm shadow-sm">
-                  <p className="font-extrabold text-[#2c3e50] uppercase tracking-wider mb-1">Cero Dependencias Cloud</p>
+                  <p className="font-extrabold text-[#2c3e50] uppercase tracking-wider mb-1">Sincronización Cloud Activa</p>
                   <p className="text-gray-600 leading-normal">
-                    Menú Check se ejecuta en <strong>modo 100% local</strong>. No enviamos datos a Firebase externas, almacenándose con seguridad directamente en la memoria local de tu navegador.
+                    Menú Check guarda tus datos en <strong>Google Cloud Firestore</strong> en tiempo real de manera aislada por usuario, garantizando total privacidad educativa.
                   </p>
                 </div>
               </footer>
