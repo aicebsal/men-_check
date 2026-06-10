@@ -1187,29 +1187,89 @@ export default function Home() {
                 </p>
               </header>
 
-              {/* Login container box - Hardened Minimalist Google Auth style */}
-              <section className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-6">
+              {/* Login container box - Hybrid Custom Credentials & Google Auth style */}
+              <section className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-gray-200 flex flex-col gap-5">
                 
                 {/* Error handling notification toast/block */}
                 {loginError && (
                   <div className="p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-semibold flex items-start gap-2 animate-shake">
                     <span className="text-sm">⚠️</span>
-                    <div className="flex-1 leading-normal">
+                    <div className="flex-1 leading-normal text-left">
                       {loginError}
                     </div>
                   </div>
                 )}
 
-                <div className="flex flex-col gap-4 text-center">
-                  <div className="text-sm text-gray-600 leading-relaxed">
-                    Para asegurar que tu lista de la compra, despensa y menús guardados estén siempre disponibles en todos tus dispositivos, conéctate de forma rápida y segura.
+                <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
+                  {/* Nombre Completo / Familiar (SÓLO REGISTRO) */}
+                  {isRegistering && (
+                    <div className="flex flex-col gap-1.5 text-left">
+                      <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
+                        Nombre Familiar o de Usuario
+                      </label>
+                      <input 
+                        type="text" 
+                        required
+                        value={registerName}
+                        onChange={(e) => setRegisterName(e.target.value)}
+                        placeholder="Ej: Familia Gómez, Ainhoa C."
+                        className="w-full h-11 px-4 rounded-md border border-gray-300 bg-gray-50/50 focus:border-[#3498db] focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm text-[#1c1e21]"
+                      />
+                    </div>
+                  )}
+
+                  {/* Campo de Correo Electrónico */}
+                  <div className="flex flex-col gap-1.5 text-left">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
+                      Correo Electrónico
+                    </label>
+                    <input 
+                      type="email" 
+                      required
+                      value={loginEmail}
+                      onChange={(e) => setLoginEmail(e.target.value)}
+                      placeholder="ejemplo@correo.com"
+                      className="w-full h-11 px-4 rounded-md border border-gray-300 bg-gray-50/50 focus:border-[#3498db] focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm text-[#1c1e21]"
+                    />
                   </div>
+
+                  {/* Campo de Contraseña */}
+                  <div className="flex flex-col gap-1.5 text-left">
+                    <label className="text-xs font-bold text-gray-600 uppercase tracking-wider ml-1">
+                      Contraseña
+                    </label>
+                    <input 
+                      type="password" 
+                      required
+                      value={loginPassword}
+                      onChange={(e) => setLoginPassword(e.target.value)}
+                      placeholder="Introduce tu contraseña"
+                      className="w-full h-11 px-4 rounded-md border border-gray-300 bg-gray-50/50 focus:border-[#3498db] focus:ring-2 focus:ring-blue-500/20 transition-all outline-none text-sm text-[#1c1e21]"
+                    />
+                  </div>
+
+                  {/* Botón de Iniciar Sesión / registrar */}
+                  <button 
+                    type="submit"
+                    className="w-full h-11 mt-2 bg-[#2c3e50] hover:bg-[#34495e] text-white font-bold rounded-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm text-sm"
+                  >
+                    {isRegistering ? "Crear Cuenta Familiar" : "Iniciar Sesión"}
+                  </button>
+                </form>
+
+                {/* Separator Divider */}
+                <div className="relative flex items-center py-2">
+                  <div className="flex-grow border-t border-gray-200" />
+                  <span className="flex-shrink mx-4 text-[10px] uppercase tracking-wider font-extrabold text-gray-400">
+                    O continúa con
+                  </span>
+                  <div className="flex-grow border-t border-gray-200" />
                 </div>
 
                 {/* Google login Button */}
                 <button 
                   onClick={handleGoogleLogin}
-                  className="w-full h-12 bg-[#2c3e50] hover:bg-[#34495e] text-white font-semibold text-sm rounded-lg flex items-center justify-center gap-3 shadow-md hover:shadow-lg transition-all active:scale-[0.98]"
+                  className="w-full h-12 bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 font-semibold text-sm rounded-lg flex items-center justify-center gap-3 shadow-sm hover:shadow transition-all active:scale-[0.98]"
                 >
                   <svg className="w-5 h-5 flex-shrink-0 bg-white p-0.5 rounded-full" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -1218,6 +1278,18 @@ export default function Home() {
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 12-4.53z" fill="#EA4335" />
                   </svg>
                   <span>Iniciar sesión con Google</span>
+                </button>
+
+                {/* Alternar entre Registro e Inicio de sesión */}
+                <button 
+                  onClick={() => {
+                    setIsRegistering(!isRegistering);
+                    setLoginError("");
+                  }}
+                  className="w-full h-11 bg-blue-50 hover:bg-blue-100 text-[#3498db] border border-blue-200 font-bold text-xs rounded-md active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-1"
+                >
+                  {isRegistering ? <UtensilsCrossed className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  <span>{isRegistering ? "Ya tengo cuenta (Iniciar Sesión)" : "Crear una nueva cuenta familiar"}</span>
                 </button>
               </section>
 
@@ -1329,21 +1401,21 @@ export default function Home() {
                 {/* Active user credentials */}
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-indigo-500 border border-indigo-600 font-bold text-white text-xs flex items-center justify-center uppercase">
-                    AC
+                    {(user.name || "US").slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-white truncate">Ainhoa C.</p>
-                    <p className="text-[10px] text-[#bdc3c7] truncate">Burriana Familia</p>
+                    <p className="text-xs font-bold text-white truncate">{user.name}</p>
+                    <p className="text-[10px] text-[#bdc3c7] truncate">{user.email}</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-1 border-t border-[#34495e]">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                  <span className="text-[11px] text-[#bdc3c7]">Sincro Local: Activa</span>
+                  <span className="text-[11px] text-[#bdc3c7]">Sincro Nube (Firebase): Activa</span>
                 </div>
 
                 <button 
-                  onClick={() => alert("Menú Check se encuentra configurado en Modo Local sin base de datos externa.\nTus recetas y listas están sincronizadas offline en tu navegador actual.")}
+                  onClick={() => alert("Menú Check se encuentra configurado en Modo Conectado.\nTus recetas y listas están sincronizadas en tiempo real en tu base de datos de Google Firebase.")}
                   className="w-full flex items-center gap-3 px-2 py-1 text-[11px] text-[#bdc3c7] hover:text-white hover:bg-[#34495e]/40 rounded text-left transition-colors"
                 >
                   <Settings className="w-3.5 h-3.5" />
